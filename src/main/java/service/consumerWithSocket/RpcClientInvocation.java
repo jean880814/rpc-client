@@ -1,4 +1,4 @@
-package service;
+package service.consumerWithSocket;
 
 import com.jean.model.RpcRequest;
 

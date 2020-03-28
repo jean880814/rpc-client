@@ -1,8 +1,6 @@
-package service;
+package service.consumerWithSocket;
 
-import java.io.IOException;
 import java.lang.reflect.Proxy;
-import java.net.Socket;
 
 public class RpcClientProxy {
     private final String ip;

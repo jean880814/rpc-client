@@ -1,7 +1,6 @@
-package service;
+package service.consumerWithZk;
 
 import com.jean.model.NettyRpcRequest;
-import com.jean.model.RpcRequest;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
@@ -12,22 +11,12 @@ import io.netty.handler.codec.LengthFieldPrepender;
 import io.netty.handler.codec.serialization.ClassResolvers;
 import io.netty.handler.codec.serialization.ObjectDecoder;
 import io.netty.handler.codec.serialization.ObjectEncoder;
+import service.consumerWithNetty.ConsumerHandler;
 
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
-import java.net.Socket;
 
-public class NettyRpcClientInvocation implements InvocationHandler {
-    private final String ip;
-    private final int port;
-
-    public NettyRpcClientInvocation(String ip, int port) {
-        this.ip = ip;
-        this.port = port;
-    }
+public class ZkRpcClientInvocation implements InvocationHandler {
 
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         NettyRpcRequest rpcRequest = new NettyRpcRequest();
@@ -35,12 +24,15 @@ public class NettyRpcClientInvocation implements InvocationHandler {
         rpcRequest.setMethod(method.getName());
         rpcRequest.setTypes(method.getParameterTypes());
         rpcRequest.setArgs(args);
-        return rpcInvoke(rpcRequest);
+        IDiscovery discovery = new ServiceDiscoveryWithZk();
+        String address = discovery.discovery(rpcRequest.getClassname());
+        return rpcInvoke(rpcRequest, address);
     }
 
-    private Object rpcInvoke(NettyRpcRequest rpcRequest) {
+    private Object rpcInvoke(NettyRpcRequest rpcRequest, String address) {
         EventLoopGroup eventLoopGroup = new NioEventLoopGroup();
         final ConsumerHandler consumerHandler = new ConsumerHandler();
+
         try {
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(eventLoopGroup).channel(NioSocketChannel.class).option(ChannelOption.TCP_NODELAY, true).handler(new ChannelInitializer<SocketChannel>() {
@@ -56,8 +48,8 @@ public class NettyRpcClientInvocation implements InvocationHandler {
                     pipeline.addLast("handler",consumerHandler);
                 }
             });
-
-            ChannelFuture channelFuture = bootstrap.connect("localhost", port).sync();
+            String[] urls = address.split(":");
+            ChannelFuture channelFuture = bootstrap.connect(urls[0], Integer.parseInt(urls[1])).sync();
             channelFuture.channel().writeAndFlush(rpcRequest).sync();
             channelFuture.channel().closeFuture().sync();
         } catch (InterruptedException e) {

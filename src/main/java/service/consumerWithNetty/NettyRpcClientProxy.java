@@ -1,4 +1,4 @@
-package service;
+package service.consumerWithNetty;
 
 import java.lang.reflect.Proxy;
 

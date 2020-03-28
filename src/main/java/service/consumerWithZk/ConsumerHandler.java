@@ -1,4 +1,4 @@
-package service;
+package service.consumerWithZk;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
